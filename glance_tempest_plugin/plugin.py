@@ -31,7 +31,9 @@ class GlanceTempestPlugin(plugins.TempestPlugin):
         return full_test_dir, base_path
 
     def register_opts(self, conf):
-        pass
+        config.register_opt_group(conf, config.image_feature_group,
+                                  project_config.image_feature_opts)
 
     def get_opt_lists(self):
-        pass
+        return [(config.image_feature_group.name,
+                 project_config.image_feature_opts)]

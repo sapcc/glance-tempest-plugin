@@ -13,3 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
+image_feature_opts = [
+    cfg.BoolOpt('enforce_scope',
+                default=False,
+                help='Does the image service enforce scope and user '
+                     'scope-aware policies?'),
+]

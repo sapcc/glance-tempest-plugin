@@ -1,0 +1,54 @@
+- job:
+    name: glance-secure-rbac-protection-functional
+    parent: devstack-tempest
+    timeout: 4200
+    required-projects:
+      - openstack/devstack-gate
+      - openstack/glance
+      - openstack/glance-tempest-plugin
+    vars:
+      tox_envlist: all
+      tempest_test_regex: 'glance_tempest_plugin.tests.rbac'
+      devstack_localrc:
+        GLANCE_ENFORCE_SCOPE: True
+        TEMPEST_PLUGINS: '/opt/stack/glance-tempest-plugin'
+        USE_PYTHON3: True
+      devstack_plugins:
+        glance: https://opendev.org/openstack/glance
+
+- job:
+    name: glance-legacy-rbac-protection-functional
+    parent: devstack-tempest
+    timeout: 4200
+    required-projects:
+      - openstack/devstack-gate
+      - openstack/glance
+      - openstack/glance-tempest-plugin
+    vars:
+      tox_envlist: all
+      tempest_test_regex: 'glance_tempest_plugin.tests.rbac.v2.test_images.Project(Admin|Member)Tests'
+      devstack_localrc:
+        TEMPEST_PLUGINS: '/opt/stack/glance-tempest-plugin'
+        USE_PYTHON3: True
+      devstack_plugins:
+        glance: https://opendev.org/openstack/glance
+      devstack_local_conf:
+        test-config:
+          $TEMPEST_CONFIG:
+            image-feature-enabled:
+              enforce_scope: true
+
+- project:
+    templates:
+      - check-requirements
+      - tempest-plugin-jobs
+    check:
+      jobs:
+        - glance-secure-rbac-protection-functional:
+            voting: false
+        - glance-legacy-rbac-protection-functional
+    gate:
+      jobs:
+        - glance-secure-rbac-protection-functional:
+            voting: false
+        - glance-legacy-rbac-protection-functional
