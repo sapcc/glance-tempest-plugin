@@ -15,6 +15,7 @@ from tempest import clients
 from tempest import config
 from tempest.lib import auth
 from tempest.lib.common.utils import data_utils
+from tempest.lib.common.utils import test_utils
 
 CONF = config.CONF
 
@@ -78,3 +79,54 @@ class RbacBaseTests(base.BaseV2ImageTest):
         creds = auth_provider.fill_credentials()
         client = clients.Manager(credentials=creds)
         return client
+
+
+def namespace(name, owner, visibility='private', protected=False):
+    ns = dict()
+    ns['namespace'] = name
+    ns['visibility'] = visibility
+    ns['description'] = data_utils.arbitrary_string()
+    ns['display_name'] = ns['namespace']
+    ns['owner'] = owner
+    ns['protected'] = protected
+    return ns
+
+
+class RbacMetadefBase(RbacBaseTests):
+    def create_namespaces(self):
+        """Create private and public namespaces for different projects."""
+        project_namespaces = []
+        alt_namespaces = []
+        project_id = self.os_project_admin.namespaces_client.project_id
+        alt_project_id = \
+            self.os_project_alt_admin.namespaces_client.project_id
+        for visibility in ['public', 'private']:
+            project_ns = "%s_%s_%s" % (
+                project_id,
+                visibility,
+                data_utils.rand_name('namespace'))
+
+            alt_ns = "%s_%s_%s" % (alt_project_id, visibility,
+                                   data_utils.rand_name('namespace'))
+
+            project_namespace = \
+                self.os_project_admin.namespaces_client.create_namespace(
+                    **namespace(project_ns, project_id,
+                                visibility=visibility))
+            project_namespaces.append(project_namespace)
+            self.addCleanup(
+                test_utils.call_and_ignore_notfound_exc,
+                self.os_project_admin.namespaces_client.delete_namespace,
+                project_ns)
+
+            alt_namespace = \
+                self.os_project_admin.namespaces_client.create_namespace(
+                    **namespace(alt_ns, alt_project_id,
+                                visibility=visibility))
+            alt_namespaces.append(alt_namespace)
+            self.addCleanup(
+                test_utils.call_and_ignore_notfound_exc,
+                self.os_project_admin.namespaces_client.delete_namespace,
+                alt_ns)
+
+        return project_namespaces + alt_namespaces

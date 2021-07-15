@@ -168,7 +168,7 @@ class ImageV2RbacTemplate(metaclass=abc.ABCMeta):
 class ProjectAdminTests(ImageV2RbacImageTest,
                         ImageV2RbacTemplate):
 
-    credentials = ['project_admin', 'system_admin']
+    credentials = ['project_admin', 'system_admin', 'project_alt_admin']
 
     def test_create_image(self):
         image = self.do_request('create_image', expected_status=201,
@@ -886,7 +886,8 @@ class ProjectAdminTests(ImageV2RbacImageTest,
 
 class ProjectMemberTests(ImageV2RbacImageTest, ImageV2RbacTemplate):
 
-    credentials = ['project_member', 'project_admin', 'system_admin']
+    credentials = ['project_member', 'project_admin', 'system_admin',
+                   'project_alt_admin']
 
     def test_create_image(self):
         image = self.do_request('create_image', expected_status=201,
@@ -1575,7 +1576,8 @@ class ProjectMemberTests(ImageV2RbacImageTest, ImageV2RbacTemplate):
 
 class ProjectReaderTests(ProjectMemberTests):
 
-    credentials = ['project_reader', 'project_admin', 'system_admin']
+    credentials = ['project_reader', 'project_admin', 'system_admin',
+                   'project_alt_admin']
 
     def test_create_image(self):
         # Project readers can't create images.

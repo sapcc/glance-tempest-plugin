@@ -31,7 +31,7 @@
       - openstack/glance-tempest-plugin
     vars:
       tox_envlist: all
-      tempest_test_regex: 'glance_tempest_plugin.tests.rbac.v2.test_images.Project(Admin|Member)Tests'
+      tempest_test_regex: 'glance_tempest_plugin.tests.rbac.v2..*.Project(Admin|Member)Tests'
       devstack_localrc:
         TEMPEST_PLUGINS: '/opt/stack/glance-tempest-plugin'
         USE_PYTHON3: True
