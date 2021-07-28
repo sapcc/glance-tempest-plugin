@@ -12,7 +12,6 @@
 
 import abc
 
-from tempest.common import tempest_fixtures as fixtures
 from tempest.lib.common.utils import data_utils
 from tempest.lib import exceptions
 
@@ -20,14 +19,6 @@ from glance_tempest_plugin.tests.rbac.v2 import base as rbac_base
 
 
 class MetadefV2RbacNamespaceTest(rbac_base.RbacMetadefBase):
-    def setUp(self):
-        # NOTE(abhishekk): As we are using global data there is a possibility
-        # of invalid results if these tests are executed concurrently, to avoid
-        # such conflicts we are using locking to execute metadef tests
-        # serially.
-        self.useFixture(fixtures.LockFixture('metadef_namespaces'))
-        super(MetadefV2RbacNamespaceTest, self).setUp()
-
     @classmethod
     def setup_clients(cls):
         super(MetadefV2RbacNamespaceTest, cls).setup_clients()

@@ -96,10 +96,10 @@ class RbacMetadefBase(RbacBaseTests):
             project_ns = "%s_%s_%s" % (
                 self.project_id,
                 visibility,
-                data_utils.rand_name('namespace'))
+                self.__class__.__name__)
 
             alt_ns = "%s_%s_%s" % (self.alt_project_id, visibility,
-                                   data_utils.rand_name('namespace'))
+                                   self.__class__.__name__)
 
             project_namespace = \
                 self.os_project_admin.namespaces_client.create_namespace(
