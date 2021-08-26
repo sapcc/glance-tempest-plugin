@@ -82,14 +82,9 @@ class RbacBaseTests(base.BaseV2ImageTest):
 
 
 def namespace(name, owner, visibility='private', protected=False):
-    ns = dict()
-    ns['namespace'] = name
-    ns['visibility'] = visibility
-    ns['description'] = data_utils.arbitrary_string()
-    ns['display_name'] = ns['namespace']
-    ns['owner'] = owner
-    ns['protected'] = protected
-    return ns
+    return {'namespace': name, 'visibility': visibility,
+            'description': data_utils.arbitrary_string(),
+            'display_name': name, 'owner': owner, 'protected': protected}
 
 
 class RbacMetadefBase(RbacBaseTests):
@@ -97,21 +92,18 @@ class RbacMetadefBase(RbacBaseTests):
         """Create private and public namespaces for different projects."""
         project_namespaces = []
         alt_namespaces = []
-        project_id = self.os_project_admin.namespaces_client.project_id
-        alt_project_id = \
-            self.os_project_alt_admin.namespaces_client.project_id
         for visibility in ['public', 'private']:
             project_ns = "%s_%s_%s" % (
-                project_id,
+                self.project_id,
                 visibility,
                 data_utils.rand_name('namespace'))
 
-            alt_ns = "%s_%s_%s" % (alt_project_id, visibility,
+            alt_ns = "%s_%s_%s" % (self.alt_project_id, visibility,
                                    data_utils.rand_name('namespace'))
 
             project_namespace = \
                 self.os_project_admin.namespaces_client.create_namespace(
-                    **namespace(project_ns, project_id,
+                    **namespace(project_ns, self.project_id,
                                 visibility=visibility))
             project_namespaces.append(project_namespace)
             self.addCleanup(
@@ -121,7 +113,7 @@ class RbacMetadefBase(RbacBaseTests):
 
             alt_namespace = \
                 self.os_project_admin.namespaces_client.create_namespace(
-                    **namespace(alt_ns, alt_project_id,
+                    **namespace(alt_ns, self.alt_project_id,
                                 visibility=visibility))
             alt_namespaces.append(alt_namespace)
             self.addCleanup(
