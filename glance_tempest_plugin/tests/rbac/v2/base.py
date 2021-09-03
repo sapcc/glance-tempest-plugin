@@ -25,7 +25,7 @@ class ImageV2RbacBaseTests(object):
     @classmethod
     def skip_checks(cls):
         super().skip_checks()
-        if not CONF.image_feature_enabled.enforce_scope:
+        if not CONF.enforce_scope.glance:
             raise cls.skipException("enforce_scope is not enabled for "
                                     "glance, skipping RBAC tests")
 
