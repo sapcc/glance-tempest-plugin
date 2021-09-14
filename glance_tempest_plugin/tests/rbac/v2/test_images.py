@@ -14,7 +14,6 @@ import abc
 
 import six
 
-from tempest.api.image import base
 from tempest import config
 from tempest.lib.common.utils import data_utils
 from tempest.lib import exceptions
@@ -24,8 +23,7 @@ from glance_tempest_plugin.tests.rbac.v2 import base as rbac_base
 CONF = config.CONF
 
 
-class ImageV2RbacImageTest(rbac_base.ImageV2RbacBaseTests,
-                           metaclass=abc.ABCMeta):
+class ImageV2RbacImageTest(rbac_base.RbacBaseTests):
 
     @classmethod
     def setup_clients(cls):
@@ -51,6 +49,8 @@ class ImageV2RbacImageTest(rbac_base.ImageV2RbacBaseTests,
         image['ramdisk_uuid'] = '00000000-1111-2222-3333-444455556666'
         return image
 
+
+class ImageV2RbacTemplate(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def test_create_image(self):
         """Test add_image policy.
@@ -165,7 +165,8 @@ class ImageV2RbacImageTest(rbac_base.ImageV2RbacBaseTests,
         pass
 
 
-class ProjectAdminTests(ImageV2RbacImageTest, base.BaseV2ImageTest):
+class ProjectAdminTests(ImageV2RbacImageTest,
+                        ImageV2RbacTemplate):
 
     credentials = ['project_admin', 'system_admin']
 
@@ -883,7 +884,7 @@ class ProjectAdminTests(ImageV2RbacImageTest, base.BaseV2ImageTest):
                         image_id=image['id'])
 
 
-class ProjectMemberTests(ProjectAdminTests, base.BaseV2ImageTest):
+class ProjectMemberTests(ImageV2RbacImageTest, ImageV2RbacTemplate):
 
     credentials = ['project_member', 'project_admin', 'system_admin']
 
@@ -1572,7 +1573,7 @@ class ProjectMemberTests(ProjectAdminTests, base.BaseV2ImageTest):
                         image_id=image['id'])
 
 
-class ProjectReaderTests(ProjectMemberTests, base.BaseV2ImageTest):
+class ProjectReaderTests(ProjectMemberTests):
 
     credentials = ['project_reader', 'project_admin', 'system_admin']
 

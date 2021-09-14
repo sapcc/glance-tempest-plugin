@@ -10,6 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from tempest.api.image import base
 from tempest import clients
 from tempest import config
 from tempest.lib import auth
@@ -18,7 +19,7 @@ from tempest.lib.common.utils import data_utils
 CONF = config.CONF
 
 
-class ImageV2RbacBaseTests(object):
+class RbacBaseTests(base.BaseV2ImageTest):
 
     identity_version = 'v3'
 
