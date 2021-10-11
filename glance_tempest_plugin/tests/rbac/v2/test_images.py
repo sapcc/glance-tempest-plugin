@@ -185,8 +185,9 @@ class ProjectAdminTests(ImageV2RbacImageTest,
 
         # FIXME: This should eventually respect tenancy when glance supports
         # system-scope and fail with an appropriate error (e.g., 403)
-        self.do_request('create_image', expected_status=201,
-                        **self.image(visibility='public'))
+        image = self.do_request('create_image', expected_status=201,
+                                **self.image(visibility='public'))
+        self.addCleanup(self.admin_images_client.delete_image, image['id'])
 
     def test_get_image(self):
         # Ensure users can get private images owned by their project.
@@ -1214,12 +1215,14 @@ class ProjectMemberTests(ImageV2RbacImageTest, ImageV2RbacTemplate):
             **self.image(visibility='private'))
         self.do_request('delete_image', expected_status=exceptions.NotFound,
                         image_id=image['id'])
+        self.addCleanup(self.admin_images_client.delete_image, image['id'])
 
         project_client = self.setup_user_client()
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='private'))
         self.do_request('delete_image', expected_status=exceptions.NotFound,
                         image_id=image['id'])
+        self.addCleanup(self.admin_images_client.delete_image, image['id'])
 
         image = self.client.create_image(
             **self.image(visibility='private'))
@@ -1230,6 +1233,7 @@ class ProjectMemberTests(ImageV2RbacImageTest, ImageV2RbacTemplate):
             **self.image(visibility='shared'))
         self.do_request('delete_image', expected_status=exceptions.NotFound,
                         image_id=image['id'])
+        self.addCleanup(self.admin_images_client.delete_image, image['id'])
 
         project_id = self.persona.credentials.project_id
         project_member = self.setup_user_client(project_id=project_id)
@@ -1242,6 +1246,7 @@ class ProjectMemberTests(ImageV2RbacImageTest, ImageV2RbacTemplate):
             **self.image(visibility='community'))
         self.do_request('delete_image', expected_status=exceptions.Forbidden,
                         image_id=image['id'])
+        self.addCleanup(self.admin_images_client.delete_image, image['id'])
 
         image = self.client.create_image(
             **self.image(visibility='community'))
@@ -1252,6 +1257,7 @@ class ProjectMemberTests(ImageV2RbacImageTest, ImageV2RbacTemplate):
             **self.image(visibility='public'))
         self.do_request('delete_image', expected_status=exceptions.Forbidden,
                         image_id=image['id'])
+        self.addCleanup(self.admin_images_client.delete_image, image['id'])
 
     def test_add_image_member(self):
         member_client = self.setup_user_client()
