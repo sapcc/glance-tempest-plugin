@@ -17,14 +17,13 @@ from tempest.lib.common.utils import data_utils
 from tempest.lib import decorators
 from tempest.lib import exceptions
 
-from glance_tempest_plugin.tests.rbac.v2.base import ImageV2RbacImageTest
-from glance_tempest_plugin.tests.rbac.v2.base import ImageV2RbacTemplate
+from glance_tempest_plugin.tests.rbac.v2 import base as rbac_base
 
 CONF = config.CONF
 
 
-class ProjectAdminTests(ImageV2RbacImageTest,
-                        ImageV2RbacTemplate):
+class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
+                             rbac_base.ImageV2RbacTemplate):
 
     credentials = ['project_admin', 'system_admin', 'project_alt_admin']
 
@@ -755,3 +754,331 @@ class ProjectAdminTests(ImageV2RbacImageTest,
         # system-scope and fail with an appropriate error (e.g., 403)
         self.do_request('reactivate_image', expected_status=204,
                         image_id=image['id'])
+
+
+class NamespacesProjectAdminTests(rbac_base.MetadefV2RbacNamespaceTest,
+                                  rbac_base.MetadefV2RbacNamespaceTemplate):
+
+    credentials = ['project_admin', 'project_alt_admin', 'primary']
+
+    def test_list_namespaces(self):
+        actual_namespaces = self.create_namespaces()
+
+        # Get above created namespace by admin role
+        resp = self.do_request('list_namespaces', expected_status=200,
+                               client=self.admin_namespace_client)
+
+        self.assertListNamespaces(actual_namespaces, resp)
+
+    def test_get_namespace(self):
+        actual_namespaces = self.create_namespaces()
+
+        # Get above created namespace by admin role
+        for ns in actual_namespaces:
+            resp = self.do_request('show_namespace', expected_status=200,
+                                   namespace=ns['namespace'],
+                                   client=self.admin_namespace_client)
+            self.assertEqual(ns['namespace'], resp['namespace'])
+
+    def test_create_namespace(self):
+        # As this is been covered in other tests for admin role,
+        # skipping to test only create namespaces seperately.
+        pass
+
+    def test_update_namespace(self):
+        actual_namespaces = self.create_namespaces()
+
+        # Updating the above created namespace by admin role
+        for ns in actual_namespaces:
+            resp = self.do_request(
+                'update_namespace', expected_status=200,
+                namespace=ns['namespace'],
+                client=self.admin_namespace_client,
+                description=data_utils.arbitrary_string(base_text="updated"))
+            self.assertNotEqual(ns['description'], resp['description'])
+
+    def test_delete_namespace(self):
+        actual_namespaces = self.create_namespaces()
+
+        # Deleting the above created namespace by admin role
+        for ns in actual_namespaces:
+            self.do_request('delete_namespace', expected_status=204,
+                            namespace=ns['namespace'],
+                            client=self.admin_namespace_client,)
+
+            # Verify the namespaces are deleted successfully
+            self.do_request('show_namespace',
+                            expected_status=exceptions.NotFound,
+                            namespace=ns['namespace'],
+                            client=self.admin_namespace_client,)
+
+
+class RSTypesProjectAdminTests(rbac_base.MetadefV2RbacResourceTypeTest,
+                               rbac_base.MetadefV2RbacResourceTypeTemplate):
+
+    credentials = ['project_admin', 'project_alt_admin', 'primary']
+
+    def test_create_resource_type(self):
+        # As this is been covered in other tests for admin role,
+        # skipping to test only create resource types separately.
+        pass
+
+    def test_get_resource_type(self):
+        ns_rs_types = self.create_resource_types()
+
+        # Get all metadef resource types with admin role of 'project'
+        for rs_type in ns_rs_types:
+            resp = self.do_request(
+                'list_resource_type_association',
+                expected_status=200,
+                client=self.resource_types_client,
+                namespace_id=rs_type['namespace']['namespace'])
+            self.assertEqual(rs_type['resource_type']['name'],
+                             resp['resource_type_associations'][0]['name'])
+
+    def test_list_resource_types(self):
+        ns_rs_types = self.create_resource_types()
+
+        # list resource types - with admin role of 'project'
+        resp = self.do_request('list_resource_types',
+                               expected_status=200,
+                               client=self.resource_types_client)
+
+        # Verify that admin role of 'project' will be able to view available
+        # resource types
+        self.assertRSTypeList(ns_rs_types, resp)
+
+    def test_delete_resource_type(self):
+        ns_rs_types = self.create_resource_types()
+
+        # delete all metadef resource types with admin role of 'project'
+        for rs_type in ns_rs_types:
+            self.do_request('delete_resource_type_association',
+                            expected_status=204,
+                            namespace_id=rs_type['namespace']['namespace'],
+                            resource_name=rs_type['resource_type']['name'],
+                            client=self.resource_types_client)
+
+            # Verify the resource types is deleted successfully
+            resp = self.do_request(
+                'list_resource_type_association', expected_status=200,
+                client=self.resource_types_client,
+                namespace_id=rs_type['namespace']['namespace'])
+            self.assertEqual([], resp['resource_type_associations'])
+
+
+class ObjectsProjectAdminTests(rbac_base.MetadefV2RbacObjectsTest,
+                               rbac_base.MetadefV2RbacObjectsTemplate):
+
+    credentials = ['project_admin', 'project_alt_admin', 'primary']
+
+    def test_get_object(self):
+        ns_objects = self.create_objects()
+
+        # Get all metadef objects with admin role
+        for obj in ns_objects:
+            resp = self.do_request(
+                'show_namespace_object',
+                expected_status=200,
+                client=self.objects_client,
+                namespace=obj['namespace']['namespace'],
+                object_name=obj['object']['name'])
+            self.assertEqual(obj['object']['name'], resp['name'])
+
+    def test_list_objects(self):
+        ns_objects = self.create_objects()
+
+        # list all metadef objects with admin role
+        for obj in ns_objects:
+            self.assertObjectsList(obj, self.objects_client)
+
+    def test_update_object(self):
+        ns_objects = self.create_objects()
+
+        # update all metadef objects with admin role of 'project'
+        for obj in ns_objects:
+            resp = self.do_request(
+                'update_namespace_object',
+                expected_status=200,
+                namespace=obj['namespace']['namespace'],
+                client=self.objects_client,
+                object_name=obj['object']['name'],
+                name=obj['object']['name'],
+                description=data_utils.arbitrary_string(base_text="updated"))
+            self.assertNotEqual(obj['object']['description'],
+                                resp['description'])
+
+    def test_delete_object(self):
+        ns_objects = self.create_objects()
+        # delete all metadef objects with admin role of 'project'
+        for obj in ns_objects:
+            self.do_request('delete_namespace_object',
+                            expected_status=204,
+                            namespace=obj['namespace']['namespace'],
+                            object_name=obj['object']['name'],
+                            client=self.objects_client)
+
+            # Verify the object is deleted successfully
+            self.do_request('show_namespace_object',
+                            expected_status=exceptions.NotFound,
+                            client=self.objects_client,
+                            namespace=obj['namespace']['namespace'],
+                            object_name=obj['object']['name'])
+
+    def test_create_object(self):
+        # As this is been covered in other tests for admin role,
+        # skipping to test only create objects seperately.
+        pass
+
+
+class PropertiesProjectAdminTests(rbac_base.MetadefV2RbacPropertiesTest,
+                                  rbac_base.MetadefV2RbacPropertiesTemplate):
+
+    credentials = ['project_admin', 'project_alt_admin', 'primary']
+
+    def test_create_property(self):
+        # As this is been covered in other tests for admin role,
+        # skipping to test only create properties separately.
+        pass
+
+    def test_get_properties(self):
+        ns_properties = self.create_properties()
+
+        # Get all metadef properties with admin role of 'project'
+        for prop in ns_properties:
+            resp = self.do_request(
+                'show_namespace_properties',
+                expected_status=200,
+                client=self.properties_client,
+                namespace=prop['namespace']['namespace'],
+                property_name=prop['property']['name'])
+            self.assertEqual(prop['property'], resp)
+
+    def test_list_properties(self):
+        ns_properties = self.create_properties()
+        # list all metadef properties with admin role of 'project'
+        for prop in ns_properties:
+            self.assertPropertyList(prop, self.properties_client)
+
+    def test_update_properties(self):
+        ns_properties = self.create_properties()
+
+        # update all metadef properties with admin role of 'project'
+        for prop in ns_properties:
+            resp = self.do_request(
+                'update_namespace_properties',
+                expected_status=200,
+                namespace=prop['namespace']['namespace'],
+                client=self.properties_client,
+                title="UPDATE_Property",
+                property_name=prop['property']['name'],
+                name=prop['property']['name'],
+                type="string")
+            self.assertNotEqual(prop['property']['title'],
+                                resp['title'])
+
+    def test_delete_properties(self):
+        ns_properties = self.create_properties()
+
+        # delete all metadef properties with admin role of 'project'
+        for prop in ns_properties:
+            self.do_request('delete_namespace_property',
+                            expected_status=204,
+                            namespace=prop['namespace']['namespace'],
+                            property_name=prop['property']['name'],
+                            client=self.properties_client)
+
+            # Verify the property is deleted successfully
+            self.do_request('show_namespace_properties',
+                            expected_status=exceptions.NotFound,
+                            client=self.properties_client,
+                            namespace=prop['namespace']['namespace'],
+                            property_name=prop['property']['name'])
+
+
+class TagsProjectAdminTests(rbac_base.MetadefV2RbacTagsTest,
+                            rbac_base.MetadefV2RbacTagsTemplate):
+
+    credentials = ['project_admin', 'project_alt_admin', 'primary']
+
+    def test_create_tag(self):
+        # As this is been covered in other tests for admin role,
+        # skipping to test only create properties separately.
+        pass
+
+    def test_get_tags(self):
+        namespaces = self.create_namespaces()
+        ns_tags = self.create_tags(namespaces)
+
+        # Get all metadef tags with admin role of 'project'
+        for tag in ns_tags:
+            resp = self.do_request(
+                'show_namespace_tag',
+                expected_status=200,
+                client=self.tags_client,
+                namespace=tag['namespace']['namespace'],
+                tag_name=tag['tag']['name'])
+            self.assertEqual(tag['tag']['name'], resp['name'])
+
+    def test_list_tags(self):
+        namespaces = self.create_namespaces()
+        ns_tags = self.create_tags(namespaces)
+        # list all metadef tags with admin role of 'project'
+        for tag in ns_tags:
+            self.assertTagsList(tag, self.tags_client)
+
+    def test_update_tags(self):
+        namespaces = self.create_namespaces()
+        ns_tags = self.create_tags(namespaces)
+
+        # update all metadef tags with admin role of 'project'
+        for tag in ns_tags:
+            resp = self.do_request(
+                'update_namespace_tag',
+                expected_status=200,
+                namespace=tag['namespace']['namespace'],
+                client=self.tags_client,
+                tag_name=tag['tag']['name'],
+                name=data_utils.arbitrary_string(base_text="updated-name"))
+            self.assertNotEqual(tag['tag']['name'], resp['name'])
+
+    def test_delete_tags(self):
+        namespaces = self.create_namespaces()
+        ns_tags = self.create_tags(namespaces)
+
+        def assertDeleteTags(tag, client, multiple_tags=False):
+            namespace = tag['namespace']['namespace']
+            if multiple_tags:
+                self.do_request('delete_namespace_tags',
+                                expected_status=204,
+                                namespace=namespace,
+                                client=client)
+                # Verify the tags are deleted successfully
+                resp = self.do_request('list_namespace_tags',
+                                       client=client,
+                                       namespace=namespace)
+                self.assertEqual(0, len(resp['tags']))
+            else:
+                tag_name = tag['tag']['name']
+                self.do_request('delete_namespace_tag',
+                                expected_status=204,
+                                namespace=namespace,
+                                tag_name=tag_name,
+                                client=client)
+
+                # Verify the tag is deleted successfully
+                self.do_request('show_namespace_tag',
+                                expected_status=exceptions.NotFound,
+                                client=client,
+                                namespace=namespace,
+                                tag_name=tag_name)
+
+        # delete all metadef tags with admin role of 'project'
+        for tag in ns_tags:
+            assertDeleteTags(tag, self.tags_client)
+
+        # Create multiple tags
+        ns_multiple_tags = self.create_tags(namespaces, multiple_tags=True)
+        # delete all metadef multiple tags with admin role of 'project'
+        for tags in ns_multiple_tags:
+            assertDeleteTags(tags, self.tags_client, multiple_tags=True)

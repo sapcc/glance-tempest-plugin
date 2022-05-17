@@ -22,7 +22,8 @@ from glance_tempest_plugin.tests.rbac.v2 import test_project_members_tests
 CONF = config.CONF
 
 
-class ProjectReaderTests(test_project_members_tests.ProjectMemberTests):
+class ImagesProjectReaderTests(
+        test_project_members_tests.ImagesProjectMemberTests):
 
     credentials = ['project_reader', 'project_admin', 'system_admin',
                    'project_alt_admin']
@@ -591,3 +592,37 @@ class ProjectReaderTests(test_project_members_tests.ProjectMemberTests):
         self.do_request('reactivate_image',
                         expected_status=exceptions.Forbidden,
                         image_id=image['id'])
+
+
+class NamespacesProjectReaderTests(
+        test_project_members_tests.NamespacesProjectMemberTests):
+    credentials = ['project_reader', 'project_alt_reader',
+                   'project_admin', 'project_alt_admin', 'primary']
+
+
+class RSTypesProjectReaderTests(
+        test_project_members_tests.RSTypesProjectMemberTests):
+
+    credentials = ['project_reader', 'project_alt_reader', 'project_admin',
+                   'project_alt_admin', 'primary']
+
+
+class ObjectsProjectReaderTests(
+        test_project_members_tests.ObjectsProjectMemberTests):
+
+    credentials = ['project_reader', 'project_alt_reader', 'project_admin',
+                   'project_alt_admin', 'primary']
+
+
+class PropertiesProjectReaderTests(
+        test_project_members_tests.PropertiesProjectMemberTests):
+
+    credentials = ['project_reader', 'project_alt_reader',
+                   'project_admin', 'project_alt_admin', 'primary']
+
+
+class TagsProjectReaderTests(
+        test_project_members_tests.TagsProjectMemberTests):
+
+    credentials = ['project_reader', 'project_alt_reader',
+                   'project_admin', 'project_alt_admin', 'primary']
