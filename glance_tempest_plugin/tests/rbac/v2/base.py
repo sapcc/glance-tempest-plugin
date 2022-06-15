@@ -9,6 +9,7 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+import abc
 
 from tempest.api.image import base
 from tempest import clients
@@ -122,3 +123,138 @@ class RbacMetadefBase(RbacBaseTests):
                 alt_ns)
 
         return project_namespaces + alt_namespaces
+
+
+class ImageV2RbacImageTest(RbacBaseTests):
+
+    @classmethod
+    def setup_clients(cls):
+        super().setup_clients()
+        cls.persona = getattr(cls, f'os_{cls.credentials[0]}')
+        cls.client = cls.persona.image_client_v2
+        # FIXME(lbragstad): This should use os_system_admin when glance
+        # supports system scope.
+        cls.admin_client = cls.os_project_admin
+        cls.admin_images_client = cls.admin_client.image_client_v2
+
+    @classmethod
+    def setup_credentials(cls):
+        super().setup_credentials()
+        cls.os_primary = getattr(cls, f'os_{cls.credentials[0]}')
+
+    def image(self, visibility=None):
+        image = {}
+        image['name'] = data_utils.rand_name('image')
+        image['container_format'] = CONF.image.container_formats[0]
+        image['disk_format'] = CONF.image.disk_formats[0]
+        image['visibility'] = visibility if visibility else 'private'
+        image['ramdisk_uuid'] = '00000000-1111-2222-3333-444455556666'
+        return image
+
+
+class ImageV2RbacTemplate(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def test_create_image(self):
+        """Test add_image policy.
+
+        This test must check:
+          * whether the persona can create a private image
+          * whether the persona can create a shared image
+          * whether the persona can create a community image
+          * whether the persona can create a public image
+        """
+
+    @abc.abstractmethod
+    def test_get_image(self):
+        """Test get_image policy.
+
+        This test must check:
+          * whether a persona can get a private image
+          * whether a persona can get a shared image
+          * whether a persona can get a community image
+          * whether a persona can get a public image
+        """
+
+    @abc.abstractmethod
+    def test_list_images(self):
+        """Test get_images policy.
+
+        This test must check:
+          * whether the persona can list private images within their project
+          * whether the persona can list shared images
+          * whether the persona can list community images
+          * whether the persona can list public images
+        """
+
+    @abc.abstractmethod
+    def test_update_image(self):
+        """Test modify_image policy.
+
+        This test must check:
+          * whether the persona can modify private images
+          * whether the persona can modify shared images
+          * whether the persona can modify community images
+          * whether the persona can modify public images
+        """
+
+    @abc.abstractmethod
+    def test_upload_image(self):
+        """Test upload_image policy.
+
+        This test must check:
+          * whether the persona can upload private images
+          * whether the persona can upload shared images
+          * whether the persona can upload community images
+          * whether the persona can upload public images
+        """
+
+    @abc.abstractmethod
+    def test_download_image(self):
+        """Test download_image policy.
+
+        This test must check:
+          * whether the persona can download private images
+          * whether the persona can download shared images
+          * whether the persona can download community images
+          * whether the persona can download public images
+        """
+
+    @abc.abstractmethod
+    def test_delete_image(self):
+        """Test delete_image policy.
+
+        This test must check:
+          * whether the persona can delete a private image
+          * whether the persona can delete a shared image
+          * whether the persona can delete a community image
+          * whether the persona can delete a public image
+          * whether the persona can delete an image outside their project
+        """
+
+    @abc.abstractmethod
+    def test_add_image_member(self):
+        pass
+
+    @abc.abstractmethod
+    def test_get_image_member(self):
+        pass
+
+    @abc.abstractmethod
+    def test_list_image_members(self):
+        pass
+
+    @abc.abstractmethod
+    def test_update_image_member(self):
+        pass
+
+    @abc.abstractmethod
+    def test_delete_image_member(self):
+        pass
+
+    @abc.abstractmethod
+    def test_deactivate_image(self):
+        pass
+
+    @abc.abstractmethod
+    def test_reactivate_image(self):
+        pass
