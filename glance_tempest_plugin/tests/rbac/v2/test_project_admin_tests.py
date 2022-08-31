@@ -41,11 +41,13 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
                                 **self.image(visibility='community'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
 
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 403)
         image = self.do_request('create_image', expected_status=201,
                                 **self.image(visibility='public'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
+        # Check that system user is not permitted to create image.
+        self.do_request('create_image', expected_status=exceptions.Forbidden,
+                        client=self.os_system_admin.image_client_v2,
+                        **self.image(visibility='public'))
 
     @decorators.idempotent_id('61fd8b5e-8a0b-46ca-91c4-6c2c2d35039d')
     def test_get_image(self):
@@ -66,24 +68,25 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='private'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('show_image', image_id=image['id'])
+        # Check that system user is not permitted to get image.
+        self.do_request('show_image', expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
+                        image_id=image['id'])
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='private'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('show_image', image_id=image['id'])
 
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='shared'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('show_image', image_id=image['id'])
-
+        # Check that system user is not permitted to get image.
+        self.do_request('show_image', expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
+                        image_id=image['id'])
         project_id = self.persona.credentials.project_id
         self.admin_client.image_member_client_v2.create_image_member(
             image['id'], member=project_id)
@@ -137,10 +140,11 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
                         public_image['id'])
 
         resp = self.do_request('list_images', expected_status=200)
+        # Check that system user is not permitted to list images.
+        self.do_request('list_images', expected_status=exceptions.Forbidden,
+                        client=self.os_system_admin.image_client_v2)
         image_ids = set(image['id'] for image in resp['images'])
 
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and only include images relevant to the project.
         self.assertIn(private_image_no_owner['id'], image_ids)
         self.assertIn(private_image['id'], image_ids)
         self.assertIn(public_image['id'], image_ids)
@@ -168,8 +172,6 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         # because it hasn't been accepted, yet.
         resp = self.do_request('list_images', expected_status=200)
         image_ids = set(image['id'] for image in resp['images'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and only include accepted images.
         self.assertIn(shared_image_1['id'], image_ids)
         self.assertIn(shared_image_2['id'], image_ids)
 
@@ -178,8 +180,6 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
             shared_image_1['id'], project_id, status='accepted')
         resp = self.do_request('list_images', expected_status=200)
         image_ids = set(image['id'] for image in resp['images'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and only include accepted images.
         self.assertIn(shared_image_1['id'], image_ids)
         self.assertIn(shared_image_2['id'], image_ids)
 
@@ -204,19 +204,18 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         name = data_utils.rand_name('new-image-name')
         patch_body = [dict(replace='/name', value=name)]
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('update_image', expected_status=200,
                         image_id=image['id'], patch=patch_body)
-
+        # Check that system user is not permitted to update image.
+        self.do_request('update_image', expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
+                        image_id=image['id'], patch=patch_body)
         project_client = self.setup_user_client()
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='private'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         name = data_utils.rand_name('new-image-name')
         patch_body = [dict(replace='/name', value=name)]
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('update_image', expected_status=200,
                         image_id=image['id'], patch=patch_body)
 
@@ -232,29 +231,33 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         name = data_utils.rand_name('new-image-name')
         patch_body = [dict(replace='/name', value=name)]
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('update_image', expected_status=200,
                         image_id=image['id'], patch=patch_body)
-
+        # Check that system user is not permitted to update image.
+        self.do_request('update_image', expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
+                        image_id=image['id'], patch=patch_body)
         image = self.admin_images_client.create_image(
             **self.image(visibility='community'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         name = data_utils.rand_name('new-image-name')
         patch_body = [dict(replace='/name', value=name)]
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 403)
         self.do_request('update_image', expected_status=200,
                         image_id=image['id'], patch=patch_body)
-
+        # Check that system user is not permitted to update image.
+        self.do_request('update_image', expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
+                        image_id=image['id'], patch=patch_body)
         image = self.admin_images_client.create_image(
             **self.image(visibility='public'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         name = data_utils.rand_name('new-image-name')
         patch_body = [dict(replace='/name', value=name)]
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 403)
         self.do_request('update_image', expected_status=200,
+                        image_id=image['id'], patch=patch_body)
+        # Check that system user is not permitted to update image.
+        self.do_request('update_image', expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'], patch=patch_body)
 
     @decorators.idempotent_id('947f1ae1-c5b6-4552-89e3-1078ca722be4')
@@ -285,46 +288,58 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
             **self.image(visibility='private'))
         self.addCleanup(self.admin_images_client.delete_image,
                         image['id'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('store_image_file', image_id=image['id'],
                         expected_status=204, data=image_data)
+        # Check that system user is not permitted to store image file.
+        self.do_request('store_image_file',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
+                        image_id=image['id'], data=image_data)
 
         project_client = self.setup_user_client()
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='private'))
         self.addCleanup(self.admin_images_client.delete_image,
                         image['id'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('store_image_file', expected_status=204,
                         image_id=image['id'], data=image_data)
-
+        # Check that system user is not permitted to store image file.
+        self.do_request('store_image_file',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
+                        image_id=image['id'], data=image_data)
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='shared'))
         self.addCleanup(self.admin_images_client.delete_image,
                         image['id'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('store_image_file', expected_status=204,
                         image_id=image['id'], data=image_data)
-
+        # Check that system user is not permitted to store image file.
+        self.do_request('store_image_file',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
+                        image_id=image['id'], data=image_data)
         image = self.admin_images_client.create_image(
             **self.image(visibility='community'))
         self.addCleanup(self.admin_images_client.delete_image,
                         image['id'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('store_image_file', expected_status=204,
                         image_id=image['id'], data=image_data)
-
+        # Check that system user is not permitted to store image file.
+        self.do_request('store_image_file',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
+                        image_id=image['id'], data=image_data)
         image = self.admin_images_client.create_image(
             **self.image(visibility='public'))
         self.addCleanup(self.admin_images_client.delete_image,
                         image['id'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('store_image_file', expected_status=204,
+                        image_id=image['id'], data=image_data)
+        # Check that system user is not permitted to store image file.
+        self.do_request('store_image_file',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'], data=image_data)
 
     @decorators.idempotent_id('24891c04-28ca-41f9-92d1-c06d8ba4b83d')
@@ -352,26 +367,30 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
             **self.image(visibility='private'))
         self.addCleanup(self.admin_images_client.delete_image,
                         image['id'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('show_image_file', expected_status=204,
+                        image_id=image['id'])
+        # Check that system user is not permitted to show image file.
+        self.do_request('show_image_file',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'])
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='private'))
         self.addCleanup(self.admin_images_client.delete_image,
                         image['id'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('show_image_file', expected_status=204,
                         image_id=image['id'])
 
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='shared'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('show_image_file', expected_status=204,
+                        image_id=image['id'])
+        # Check that system user is not permitted to show image file.
+        self.do_request('show_image_file',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'])
 
         image = self.admin_images_client.create_image(
@@ -391,17 +410,21 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='private'))
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('delete_image', expected_status=204,
+                        image_id=image['id'])
+        # Check that system user is not permitted to delete image.
+        self.do_request('delete_image', expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'])
 
         project_client = self.setup_user_client()
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='private'))
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('delete_image', expected_status=204,
+                        image_id=image['id'])
+        # Check that system user is not permitted to delete image.
+        self.do_request('delete_image', expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'])
 
         image = self.client.create_image(
@@ -412,9 +435,11 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         project_client = self.setup_user_client()
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='shared'))
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('delete_image', expected_status=204,
+                        image_id=image['id'])
+        # Check that system user is not permitted to delete image.
+        self.do_request('delete_image', expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'])
 
         image = self.client.create_image(
@@ -424,9 +449,11 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
 
         image = project_client.image_client_v2.create_image(
             **self.image(visibility='community'))
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('delete_image', expected_status=204,
+                        image_id=image['id'])
+        # Check that system user is not permitted to delete image.
+        self.do_request('delete_image', expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'])
 
         image = self.client.create_image(
@@ -436,9 +463,11 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='public'))
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('delete_image', expected_status=204,
+                        image_id=image['id'])
+        # Check that system user is not permitted to delete image.
+        self.do_request('delete_image', expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'])
 
     @decorators.idempotent_id('ec3da4dc-f478-4a70-8799-db0814e340f4')
@@ -487,15 +516,15 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         project_two_client.image_member_client_v2.create_image_member(
             image['id'], member=project_one_id)
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404). We're a
-        # project-admin in this case, which allows us to do this. Once
-        # system-scope is implemented, project-admins shouldn't be allowed to
-        # view image members for images outside their scope.
         self.do_request('show_image_member',
                         client=self.persona.image_member_client_v2,
                         expected_status=200, image_id=image['id'],
                         member_id=project_one_id)
+        # Check that system user is not permitted to show image member.
+        self.do_request('show_image_member',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_member_client_v2,
+                        image_id=image['id'], member_id=project_one_id)
 
     @decorators.idempotent_id('daaef0c5-1172-457b-b1a3-0736b64c8426')
     def test_list_image_members(self):
@@ -519,10 +548,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
                                expected_status=200, image_id=image['id'])
         members = set(m['member_id'] for m in resp['members'])
         self.assertIn(project_id, members)
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and exclude members from other projects because the
-        # image was shared with the other_member_project_id.
         self.assertIn(other_member_project_id, members)
+        # Check that system user is not permitted to list image members.
+        self.do_request('list_image_members',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_member_client_v2,
+                        image_id=image['id'])
 
     @decorators.idempotent_id('2baaaca0-6335-4219-9bd9-207a5cfda6a2')
     def test_update_image_member(self):
@@ -561,25 +592,21 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         project_client.image_member_client_v2.create_image_member(
             image['id'], member=member_project_id)
 
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404). Project
-        # users shouldn't be able to update shared status for shared images in
-        # other projects, but here this is possible because the persona is the
-        # almighty project-admin.
         self.do_request('update_image_member',
                         client=self.persona.image_member_client_v2,
                         expected_status=200, image_id=image['id'],
                         member_id=member_project_id, status='accepted')
 
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404). Project
-        # users shouldn't be able to update shared status for shared images in
-        # other projects, but here this is possible because the persona is the
-        # almighty project-admin.
         self.do_request('update_image_member',
                         client=self.persona.image_member_client_v2,
                         expected_status=200, image_id=image['id'],
                         member_id=member_project_id, status='rejected')
+        # Check that system user is not permitted to update image member.
+        self.do_request('update_image_member',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_member_client_v2,
+                        image_id=image['id'], member_id=member_project_id,
+                        status='rejected')
 
     @decorators.idempotent_id('7f0a8e2b-b655-416a-914b-9615cff18bbf')
     def test_delete_image_member(self):
@@ -615,15 +642,15 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         project_client.image_member_client_v2.create_image_member(
             image['id'], member=member_project_id)
 
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404). When
-        # glance supports system-scope and updates the default policies
-        # accordingly, project-admins shouldn't be able to delete image members
-        # outside for images outside their project.
         self.do_request('delete_image_member',
                         client=self.persona.image_member_client_v2,
                         expected_status=204, image_id=image['id'],
                         member_id=member_project_id)
+        # Check that system user is not permitted to delete image member.
+        self.do_request('delete_image_member',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_member_client_v2,
+                        image_id=image['id'], member_id=member_project_id)
 
     @decorators.idempotent_id('dfc73f6f-bf91-4b6a-8482-acc8c436e066')
     def test_deactivate_image(self):
@@ -654,9 +681,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         project_client.image_client_v2.store_image_file(image['id'],
                                                         image_data)
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('deactivate_image', expected_status=204,
+                        image_id=image['id'])
+        # Check that system user is not permitted to deactivate image.
+        self.do_request('deactivate_image',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'])
 
         image = project_client.image_client_v2.create_image(
@@ -664,27 +694,36 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         project_client.image_client_v2.store_image_file(image['id'],
                                                         image_data)
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('deactivate_image', expected_status=204,
+                        image_id=image['id'])
+        # Check that system user is not permitted to deactivate image.
+        self.do_request('deactivate_image',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'])
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='community'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         self.admin_images_client.store_image_file(image['id'], image_data)
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 403)
         self.do_request('deactivate_image', expected_status=204,
+                        image_id=image['id'])
+        # Check that system user is not permitted to deactivate image.
+        self.do_request('deactivate_image',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'])
 
         image = self.admin_images_client.create_image(
             **self.image(visibility='public'))
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         self.admin_images_client.store_image_file(image['id'], image_data)
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 403)
         self.do_request('deactivate_image', expected_status=204,
+                        image_id=image['id'])
+        # Check that system user is not permitted to deactivate image.
+        self.do_request('deactivate_image',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'])
 
     @decorators.idempotent_id('3cbef53c-ab8a-4343-b993-8f9e14ab90d1')
@@ -719,9 +758,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         project_client.image_client_v2.store_image_file(image['id'],
                                                         image_data)
         project_client.image_client_v2.deactivate_image(image['id'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('reactivate_image', expected_status=204,
+                        image_id=image['id'])
+        # Check that system user is not permitted to reactivate image.
+        self.do_request('reactivate_image',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'])
 
         image = project_client.image_client_v2.create_image(
@@ -730,9 +772,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         project_client.image_client_v2.store_image_file(image['id'],
                                                         image_data)
         project_client.image_client_v2.deactivate_image(image['id'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 404)
         self.do_request('reactivate_image', expected_status=204,
+                        image_id=image['id'])
+        # Check that system user is not permitted to reactivate image.
+        self.do_request('reactivate_image',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'])
 
         image = self.admin_images_client.create_image(
@@ -740,9 +785,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         self.admin_images_client.store_image_file(image['id'], image_data)
         self.admin_images_client.deactivate_image(image['id'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 403)
         self.do_request('reactivate_image', expected_status=204,
+                        image_id=image['id'])
+        # Check that system user is not permitted to reactivate image.
+        self.do_request('reactivate_image',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'])
 
         image = self.admin_images_client.create_image(
@@ -750,9 +798,12 @@ class ImageProjectAdminTests(rbac_base.ImageV2RbacImageTest,
         self.addCleanup(self.admin_images_client.delete_image, image['id'])
         self.admin_images_client.store_image_file(image['id'], image_data)
         self.admin_images_client.deactivate_image(image['id'])
-        # FIXME: This should eventually respect tenancy when glance supports
-        # system-scope and fail with an appropriate error (e.g., 403)
         self.do_request('reactivate_image', expected_status=204,
+                        image_id=image['id'])
+        # Check that system user is not permitted to reactivate image.
+        self.do_request('reactivate_image',
+                        expected_status=exceptions.NotFound,
+                        client=self.os_system_admin.image_client_v2,
                         image_id=image['id'])
 
 
